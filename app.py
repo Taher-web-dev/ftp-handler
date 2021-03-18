@@ -13,13 +13,9 @@ def hello_world():
 
 @app.route('/', methods=['POST'])
 def push_file():
-    # payload = request.get_json()
-    # data = payload.get('data')
-    data = dict(
-        a=1,
-        b=2,
-        c=3
-    )
+    payload = request.get_json()
+    data = payload.get('data')
+
     df = pd.DataFrame(data)
     f = io.StringIO()
     df.to_csv(f)
