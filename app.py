@@ -17,10 +17,15 @@ def push_file():
     data = payload.get('data')
     filename = payload.get('filename')
 
-    df = pd.DataFrame(data)
-    f = io.StringIO()
-    df.to_csv(f)
-    bio = io.BytesIO(str.encode(f.getvalue()))
+    # df = pd.DataFrame(data)
+    # f = io.StringIO()
+    # df.to_csv(f)
+    res = ""
+    for doc in data:
+        for k, v in doc.items():
+            res += f"{k} : {v} \n"
+
+    bio = io.BytesIO(str.encode(res))
 
     ftp = FTP('ftp.lnpbermuda.org')
     print("log in to host")
