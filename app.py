@@ -26,8 +26,12 @@ def push_file():
     print("log in to host")
     ftp.login("lnpber01", "LA04dpv1951")
 
+    ftp.cwd("/test_directory")
+    print("changed directory...")
+
     print("started file transfer...")
     ftp.storbinary(f"STOR {filename}", bio)
+    print(f"finished file transfer for {filename}.")
 
     ftp.close()
 
