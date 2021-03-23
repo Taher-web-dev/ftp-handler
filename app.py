@@ -19,6 +19,8 @@ DIRECTORIES = dict(lnp=dict(host="ftp.lnpbermuda.org", username="lnpber01", pass
 
 @app.route('/')
 def hello_world():
+    print(ENV)
+    print(lnp_single_record_directory)
     return 'Hello Worlds!'
 
 
