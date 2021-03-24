@@ -1,4 +1,5 @@
 import os
+from threading import Thread
 
 import pysftp
 from flask import Flask, request
@@ -36,8 +37,14 @@ def push_file():
     filename = payload.get('filename')
     target = payload.get('target')
 
-    print(f"FTP TARGET IS {target}")
+    ftp_transfer_thread = Thread(target=ftp_transfer_job, kwargs=dict(data=data, filename=filename, target=target))
+    ftp_transfer_thread.start()
 
+    return 'ftp done!'
+
+
+def ftp_transfer_job(data, target, filename):
+    print(f"FTP Job started for {target} - {filename}")
     res = ""
     for doc in data:
         for k, v in doc.items():
@@ -45,11 +52,8 @@ def push_file():
     if target == 'lnp':
         bio = io.BytesIO(str.encode(res))
         ftp = FTP('ftp.lnpbermuda.org')
-        print("log in to host")
         ftp.login("lnpber01", "LA04dpv1951")
         ftp.cwd(lnp_single_record_directory)
-        print("changed directory...")
-        print("started file transfer...")
         ftp.storbinary(f"STOR {filename}", bio)
         print(f"finished file transfer for {filename}.")
         ftp.close()
@@ -66,7 +70,6 @@ def push_file():
             sftp.putfo(io.StringIO(res), filename)
 
     print(f"{filename} Pushed to {target}")
-    return 'ftp done!'
 
 
 # @app.route('/transactions', methods=['POST'])
