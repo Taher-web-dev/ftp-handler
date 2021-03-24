@@ -11,11 +11,11 @@ ENV = os.environ.get('ENV')
 if ENV == "PROD":
     lnp_single_record_directory = "/public_html/data/SingleRecord"
     netnumber_directory = "/uploads"
-    digicel_directory = "/uploads"
+    digicel_directory = "uploads"
 else:
     lnp_single_record_directory = "/test_directory"
     netnumber_directory = "/recon"
-    digicel_directory = "/uploads_test"
+    digicel_directory = "uploads_test"
 
 DIRECTORIES = dict(lnp=dict(host="ftp.lnpbermuda.org", username="lnpber01", password="LA04dpv1951"),
                    netnumber=dict(),
@@ -65,6 +65,7 @@ def push_file():
             sftp.cwd(digicel_directory)
             sftp.putfo(io.StringIO(res), filename)
 
+    print(f"{filename} Pushed to {target}")
     return 'ftp done!'
 
 
