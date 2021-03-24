@@ -1,6 +1,6 @@
 import os
 from threading import Thread
-
+from datetime import datetime
 import pysftp
 from flask import Flask, request
 import pandas as pd
@@ -11,10 +11,14 @@ app = Flask(__name__)
 ENV = os.environ.get('ENV')
 if ENV == "PROD":
     lnp_single_record_directory = "/public_html/data/SingleRecord"
+    lnp_last_update_dir = "/public_html/data/lastUpdate"
+    lnp_history_dir = "/public_html/data/history"
     netnumber_directory = "/uploads"
     digicel_directory = "uploads"
 else:
     lnp_single_record_directory = "/test_directory"
+    lnp_last_update_dir = "/test_directory"
+    lnp_history_dir = "/test_directory"
     netnumber_directory = "/recon"
     digicel_directory = "uploads_test"
 
@@ -38,6 +42,18 @@ def push_file():
     target = payload.get('target')
 
     ftp_transfer_thread = Thread(target=ftp_transfer_job, kwargs=dict(data=data, filename=filename, target=target))
+    ftp_transfer_thread.start()
+
+    return 'ftp done!'
+
+
+@app.route('/all_portings', methods=['POST'])
+def push_all_portings_file():
+    payload = request.get_json()
+    data = payload.get('data')
+    target = payload.get('target')
+
+    ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(data=data, target=target))
     ftp_transfer_thread.start()
 
     return 'ftp done!'
@@ -70,6 +86,29 @@ def ftp_transfer_job(data, target, filename):
             sftp.putfo(io.StringIO(res), filename)
 
     print(f"{filename} Pushed to {target}")
+
+
+def all_ported_numbers_transfer_job(data, target, ):
+    print(f"All ported numbers Job started for {target} ")
+    f = io.StringIO()
+    df_cols = ['number', 'block_operator', 'block_operator_prefix', 'new_operator', 'new_operator_prefix',
+               'number_porting', 'date_porting', 'date_porting_lbl', 'status']
+    df = pd.DataFrame(data)
+    df = df.loc[:, df_cols]
+    df.to_csv(f)
+    bio = io.BytesIO(str.encode(f.getvalue()))
+
+    if target == 'lnp':
+        ftp = FTP('ftp.lnpbermuda.org')
+        ftp.login("lnpber01", "LA04dpv1951")
+        # store latest file
+        ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio)
+        # store history
+        ftp.storbinary(f'STOR {lnp_history_dir}/NPSported_numbers_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}', bio)
+
+        ftp.close()
+
+        print(f"All ported numbers  Pushed to {target}")
 
 
 # @app.route('/transactions', methods=['POST'])
