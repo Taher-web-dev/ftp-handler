@@ -1,26 +1,39 @@
 import os
 from threading import Thread
 from datetime import datetime
+
+import firebase_admin
 import pysftp
+from firebase_admin import credentials, firestore
 from flask import Flask, request
 import pandas as pd
 import io
 from ftplib import FTP
 
+from google.cloud.firestore_v1 import Client
+
 app = Flask(__name__)
 ENV = os.environ.get('ENV')
+
 if ENV == "PROD":
     lnp_single_record_directory = "/public_html/data/SingleRecord"
     lnp_last_update_dir = "/public_html/data/lastUpdate"
     lnp_history_dir = "/public_html/data/history"
     netnumber_directory = "/uploads"
     digicel_directory = "uploads"
+    fb_cred_path = "./secrets/lnpbermuda-prod-firebase-adminsdk-ovf8g-a4685962de.json"
+
 else:
     lnp_single_record_directory = "/test_directory"
     lnp_last_update_dir = "/test_directory"
     lnp_history_dir = "/test_directory"
     netnumber_directory = "/recon"
     digicel_directory = "uploads_test"
+    fb_cred_path = "./secrets/lnpbermuda-dev-firebase-adminsdk-125rr-bad1f123e9.json"
+
+cred = credentials.Certificate(fb_cred_path)
+firebase_admin.initialize_app(cred)
+dbf: Client = firestore.client()
 
 DIRECTORIES = dict(lnp=dict(host="ftp.lnpbermuda.org", username="lnpber01", password="LA04dpv1951"),
                    netnumber=dict(),
@@ -50,11 +63,10 @@ def push_file():
 @app.route('/all_portings', methods=['POST'])
 def push_all_portings_file():
     payload = request.get_json()
-    data = payload.get('data')
     target = payload.get('target')
 
     print(f"STARTING ALL PORTINGS TRANSFER THREAD!")
-    ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(data=data, target=target))
+    ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(target=target))
     ftp_transfer_thread.start()
 
     return 'ftp done!'
@@ -68,29 +80,41 @@ def ftp_transfer_job(data, target, filename):
             res += f"{k} : {v} \n"
     if target == 'lnp':
         bio = io.BytesIO(str.encode(res))
-        ftp = FTP('ftp.lnpbermuda.org')
-        ftp.login("lnpber01", "LA04dpv1951")
-        ftp.cwd(lnp_single_record_directory)
-        ftp.storbinary(f"STOR {filename}", bio)
-        print(f"finished file transfer for {filename}.")
-        ftp.close()
+        try:
+            ftp = FTP('ftp.lnpbermuda.org')
+            ftp.login("lnpber01", "LA04dpv1951")
+            ftp.cwd(lnp_single_record_directory)
+            ftp.storbinary(f"STOR {filename}", bio)
+            print(f"finished file transfer for {filename}.")
+            ftp.close()
+        except Exception as e:
+            print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
 
     elif target == 'netnumber':
-        with pysftp.Connection(host="ftp.netnumber.com", username="bmnp", private_key_pass="lnpbermuda",
-                               private_key="/home/aziz/.ssh/id_rsa") as sftp:
-            sftp.cwd(netnumber_directory)
-            sftp.putfo(io.StringIO(res), filename)
+        try:
+            with pysftp.Connection(host="ftp.netnumber.com", username="bmnp", private_key_pass="lnpbermuda",
+                                   private_key="/home/aziz/.ssh/id_rsa") as sftp:
+                sftp.cwd(netnumber_directory)
+                sftp.putfo(io.StringIO(res), filename)
+        except Exception as e:
+            print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
 
     elif target == 'digicel':
-        with pysftp.Connection(host="64.147.95.49", username="LNPBermuda", password="4mAuYfV8cstQezpw") as sftp:
-            sftp.cwd(digicel_directory)
-            sftp.putfo(io.StringIO(res), filename)
+        try:
+            with pysftp.Connection(host="64.147.95.49", username="LNPBermuda", password="4mAuYfV8cstQezpw") as sftp:
+                sftp.cwd(digicel_directory)
+                sftp.putfo(io.StringIO(res), filename)
+        except Exception as e:
+            print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
 
     print(f"{filename} Pushed to {target}")
 
 
-def all_ported_numbers_transfer_job(data, target, ):
+def all_ported_numbers_transfer_job(target):
     print(f"All ported numbers Job started for {target} ")
+    data = dbf.collection('portings').stream()
+    data = [d.to_dict() for d in data]
+
     f = io.StringIO()
     df_cols = ['number', 'block_operator', 'block_operator_prefix', 'new_operator', 'new_operator_prefix',
                'number_porting', 'date_porting', 'date_porting_lbl', 'status']
@@ -100,16 +124,20 @@ def all_ported_numbers_transfer_job(data, target, ):
     bio = io.BytesIO(str.encode(f.getvalue()))
 
     if target == 'lnp':
-        ftp = FTP('ftp.lnpbermuda.org')
-        ftp.login("lnpber01", "LA04dpv1951")
-        # store latest file
-        ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio)
-        # store history
-        ftp.storbinary(f'STOR {lnp_history_dir}/NPSported_numbers_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}', bio)
+        try:
+            ftp = FTP('ftp.lnpbermuda.org')
+            ftp.login("lnpber01", "LA04dpv1951")
+            # store latest file
+            ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio)
+            # store history
+            ftp.storbinary(f'STOR {lnp_history_dir}/NPSported_numbers_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}',
+                           bio)
 
-        ftp.close()
+            ftp.close()
 
-        print(f"All ported numbers  Pushed to {target}")
+            print(f"All ported numbers  Pushed to {target}")
+        except Exception as e:
+            print(f"EXCEPTION at PORTING LIST TRANSFER for {target} => {str(e)}")
 
 
 if __name__ == '__main__':
