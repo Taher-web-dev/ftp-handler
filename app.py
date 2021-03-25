@@ -14,7 +14,9 @@ from google.cloud.firestore_v1 import Client
 
 app = Flask(__name__)
 ENV = os.environ.get('ENV')
-
+LNP_HOST = 'ftp.lnpbermuda.org'
+LNP_USER = "lnpber01"
+LNP_PASSWORD = "LA04dpv1951"
 if ENV == "PROD":
     lnp_single_record_directory = "/public_html/data/SingleRecord"
     lnp_last_update_dir = "/public_html/data/lastUpdate"
@@ -81,8 +83,8 @@ def ftp_transfer_job(data, target, filename):
     if target == 'lnp':
         bio = io.BytesIO(str.encode(res))
         try:
-            ftp = FTP('ftp.lnpbermuda.org')
-            ftp.login("lnpber01", "LA04dpv1951")
+            ftp = FTP(LNP_HOST)
+            ftp.login(LNP_USER, LNP_PASSWORD)
             ftp.cwd(lnp_single_record_directory)
             ftp.storbinary(f"STOR {filename}", bio)
             print(f"finished file transfer for {filename}.")
@@ -121,17 +123,18 @@ def all_ported_numbers_transfer_job(target):
     df = pd.DataFrame(data)
     df = df.loc[:, df_cols]
     df.to_csv(f)
-    bio = io.BytesIO(str.encode(f.getvalue()))
+    bio_latest = io.BytesIO(str.encode(f.getvalue()))
+    bio_history = io.BytesIO(str.encode(f.getvalue()))
 
     if target == 'lnp':
         try:
-            ftp = FTP('ftp.lnpbermuda.org')
-            ftp.login("lnpber01", "LA04dpv1951")
+            ftp = FTP(LNP_HOST)
+            ftp.login(LNP_USER, LNP_PASSWORD)
             # store latest file
-            ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio)
+            ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio_latest)
             # store history
-            ftp.storbinary(f'STOR {lnp_history_dir}/NPSported_numbers_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}',
-                           bio)
+            filename = f'NPSported_numbers_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.csv'
+            ftp.storbinary(f'STOR {lnp_history_dir}/{filename}', bio_history)
 
             ftp.close()
 
