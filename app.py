@@ -49,7 +49,7 @@ def hello_world():
     return 'Hello Worlds!'
 
 
-@app.route('/', methods=['POST'])
+@app.route('/single_doc', methods=['POST'])
 def push_file():
     payload = request.get_json()
     data = payload.get('data')
