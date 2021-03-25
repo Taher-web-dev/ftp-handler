@@ -53,6 +53,7 @@ def push_all_portings_file():
     data = payload.get('data')
     target = payload.get('target')
 
+    print(f"STARTING ALL PORTINGS TRANSFER THREAD!")
     ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(data=data, target=target))
     ftp_transfer_thread.start()
 
@@ -109,37 +110,6 @@ def all_ported_numbers_transfer_job(data, target, ):
         ftp.close()
 
         print(f"All ported numbers  Pushed to {target}")
-
-
-# @app.route('/transactions', methods=['POST'])
-# def save_all_transactions():
-#     payload = request.get_json()
-#     data = payload.get('data')
-#     filename = payload.get('filename')
-#     # df = pd.DataFrame(data)
-#     # f = io.StringIO()
-#     # df.to_csv(f)
-#     res = ""
-#     for doc in data:
-#         for k, v in doc.items():
-#             res += f"{k} : {v} \n"
-#
-#     bio = io.BytesIO(str.encode(res))
-#
-#     ftp = FTP('ftp.lnpbermuda.org')
-#     print("log in to host")
-#     ftp.login("lnpber01", "LA04dpv1951")
-#
-#     ftp.cwd(lnp_single_record_directory)
-#     print("changed directory...")
-#
-#     print("started file transfer...")
-#     ftp.storbinary(f"STOR {filename}", bio)
-#     print(f"finished file transfer for {filename}.")
-#
-#     ftp.close()
-#
-#     return 'ftp done!'
 
 
 if __name__ == '__main__':
