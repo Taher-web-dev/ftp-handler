@@ -122,7 +122,8 @@ def all_ported_numbers_transfer_job(target):
                'number_porting', 'date_porting', 'date_porting_lbl', 'status']
     df = pd.DataFrame(data)
     df = df.loc[:, df_cols]
-    df.to_csv(f)
+
+    df.to_csv(f, index=False)
     bio_latest = io.BytesIO(str.encode(f.getvalue()))
     bio_history = io.BytesIO(str.encode(f.getvalue()))
 
