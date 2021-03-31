@@ -24,6 +24,8 @@ if ENV == "PROD":
     netnumber_directory = "/uploads"
     digicel_directory = "updates"
     fb_cred_path = "./secrets/lnpbermuda-prod-firebase-adminsdk-ovf8g-a4685962de.json"
+    cell_filename = "/public_html/ported_numbers.csv"
+
 
 else:
     lnp_single_record_directory = "/test_directory"
@@ -32,6 +34,7 @@ else:
     netnumber_directory = "/recon"
     digicel_directory = "uploads_test"
     fb_cred_path = "./secrets/lnpbermuda-dev-firebase-adminsdk-125rr-bad1f123e9.json"
+    cell_filename = "/public_html/ported_numbers_TEST.csv"
 
 cred = credentials.Certificate(fb_cred_path)
 firebase_admin.initialize_app(cred)
@@ -142,7 +145,7 @@ def all_ported_numbers_transfer_job(target):
             # store latest file
             ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio_latest)
             # store latest file CELL
-            ftp.storbinary(f"STOR /public_html/ported_numbers.csv", bio_cell)
+            ftp.storbinary(f"STOR {cell_filename}", bio_cell)
             # store history
             filename = f'NPSported_numbers_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.csv'
             ftp.storbinary(f'STOR {lnp_history_dir}/{filename}', bio_history)
