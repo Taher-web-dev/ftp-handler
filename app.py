@@ -22,7 +22,7 @@ if ENV == "PROD":
     lnp_last_update_dir = "/public_html/data/lastUpdate"
     lnp_history_dir = "/public_html/data/history"
     netnumber_directory = "/uploads"
-    digicel_directory = "uploads"
+    digicel_directory = "updates"
     fb_cred_path = "./secrets/lnpbermuda-prod-firebase-adminsdk-ovf8g-a4685962de.json"
 
 else:
@@ -77,9 +77,16 @@ def push_all_portings_file():
 def ftp_transfer_job(data, target, filename):
     print(f"FTP Job started for {target} - {filename}")
     res = ""
-    for doc in data:
-        for k, v in doc.items():
-            res += f"{k} : {v} \n"
+    if target != 'netnumber':
+        for doc in data:
+            for k, v in doc.items():
+                res += f"{k} : {v} \n"
+    elif target == 'netnumber':
+        for doc in data:
+            for k, v in doc.items():
+                res += f"{v},"
+        res = res[:-1]
+
     if target == 'lnp':
         bio = io.BytesIO(str.encode(res))
         try:
