@@ -126,6 +126,7 @@ def all_ported_numbers_transfer_job(target):
     df.to_csv(f, index=False)
     bio_latest = io.BytesIO(str.encode(f.getvalue()))
     bio_history = io.BytesIO(str.encode(f.getvalue()))
+    bio_cell = io.BytesIO(str.encode(f.getvalue()))
 
     if target == 'lnp':
         try:
@@ -133,6 +134,8 @@ def all_ported_numbers_transfer_job(target):
             ftp.login(LNP_USER, LNP_PASSWORD)
             # store latest file
             ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio_latest)
+            # store latest file CELL
+            ftp.storbinary(f"STOR /public_html/ported_numbers.csv", bio_cell)
             # store history
             filename = f'NPSported_numbers_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.csv'
             ftp.storbinary(f'STOR {lnp_history_dir}/{filename}', bio_history)
