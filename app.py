@@ -24,7 +24,7 @@ if ENV == "PROD":
     netnumber_directory = "/uploads"
     digicel_directory = "updates"
     fb_cred_path = "./secrets/lnpbermuda-prod-firebase-adminsdk-ovf8g-a4685962de.json"
-    cell_filename = "/public_html/ported_numbers.csv"
+    cell_filename = "/public_ftp/ported_numbers.csv"
 
 
 else:
