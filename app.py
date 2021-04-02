@@ -34,7 +34,7 @@ else:
     netnumber_directory = "/recon"
     digicel_directory = "uploads_test"
     fb_cred_path = "./secrets/lnpbermuda-dev-firebase-adminsdk-125rr-bad1f123e9.json"
-    cell_filename = "/public_html/ported_numbers_TEST.csv"
+    cell_filename = "/test_directory/ported_numbers_TEST.csv"
 
 cred = credentials.Certificate(fb_cred_path)
 firebase_admin.initialize_app(cred)
