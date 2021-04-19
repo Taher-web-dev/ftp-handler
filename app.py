@@ -1,3 +1,4 @@
+import csv
 import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -13,7 +14,7 @@ import pandas as pd
 import io
 from ftplib import FTP
 
-from google.cloud import bigquery
+from google.cloud import bigquery, firestore
 from google.cloud.firestore_v1 import Client
 
 app = Flask(__name__)
@@ -150,19 +151,28 @@ def ftp_transfer_job(data, target, filename):
 def all_ported_numbers_transfer_job(target):
     print(f"All ported numbers Job started for {target} ")
     data = dbf.collection('portings').stream()
+    data2 = dbf.collection('portings').order_by("date_porting", direction=firestore.Query.DESCENDING).stream()
     data = [d.to_dict() for d in data]
+    data2 = [d.to_dict() for d in data2]
     status = True
     error = None
     f = io.StringIO()
+    f2 = io.StringIO()
     df_cols = ['number', 'block_operator', 'block_operator_prefix', 'new_operator', 'new_operator_prefix',
                'number_porting', 'date_porting', 'date_porting_lbl', 'status']
+
     df = pd.DataFrame(data)
+    df2 = pd.DataFrame(data2)
+
     df = df.loc[:, df_cols]
+    df2 = df2.loc[:, df_cols]
 
     df.to_csv(f, index=False)
+    df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
+
     bio_latest = io.BytesIO(str.encode(f.getvalue()))
     bio_history = io.BytesIO(str.encode(f.getvalue()))
-    bio_cell = io.BytesIO(str.encode(f.getvalue()))
+    bio_cell = io.BytesIO(str.encode(f2.getvalue()))
     date = datetime.now()
     if target == 'lnp':
         try:
