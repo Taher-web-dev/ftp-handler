@@ -151,8 +151,8 @@ def ftp_transfer_job(data, target, filename):
 
 def all_ported_numbers_transfer_job(target):
     print(f"All ported numbers Job started for {target} ")
-    data = dbf.collection('portings').order_by("date_porting", direction=Query.DESCENDING).stream()
-    data2 = dbf.collection('portings').order_by("date_porting", direction=Query.ASCENDING).stream()
+    data = dbf.collection('portings').order_by("date_porting", direction=Query.ASCENDING).stream()
+    data2 = dbf.collection('portings').order_by("date_porting", direction=Query.DESCENDING).stream()
     data = [d.to_dict() for d in data]
     data2 = [d.to_dict() for d in data2]
     status = True
