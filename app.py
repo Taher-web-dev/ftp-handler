@@ -154,7 +154,7 @@ def all_ported_numbers_transfer_job(target):
     data = dbf.collection('portings').order_by("date_porting", direction=Query.ASCENDING).stream()
     data2 = dbf.collection('portings').order_by("date_porting", direction=Query.DESCENDING).stream()
     data = [d.to_dict() for d in data]
-    data2 = [d.to_dict() for d in data2]
+    data2 = [d2.to_dict() for d2 in data2]
     status = True
     error = None
     f = io.StringIO()
@@ -167,6 +167,13 @@ def all_ported_numbers_transfer_job(target):
 
     df = df.loc[:, df_cols]
     df2 = df2.loc[:, df_cols]
+
+    print("DF1")
+    print("---------------------------------------------")
+    print(df)
+    print("DF2")
+    print("---------------------------------------------")
+    print(df2)
 
     df.to_csv(f, index=False)
     df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
