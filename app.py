@@ -181,7 +181,7 @@ def all_ported_numbers_transfer_job(target):
             ftp.login(LNP_USER, LNP_PASSWORD)
             # store latest file
             ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv",
-                           df.to_csv(index=False, sep=",", media_type="text/csv"))
+                           df.to_csv(index=False, sep=","))
             # store latest file CELL
             ftp.storbinary(f"STOR {cell_filename}", bio_cell)
             # store history
