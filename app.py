@@ -151,7 +151,7 @@ def ftp_transfer_job(data, target, filename):
 
 def all_ported_numbers_transfer_job(target):
     print(f"All ported numbers Job started for {target} ")
-    data = dbf.collection('portings').stream()
+    data = dbf.collection('portings').order_by("date_porting", direction=Query.DESCENDING).stream()
     data2 = dbf.collection('portings').order_by("date_porting", direction=Query.ASCENDING).stream()
     data = [d.to_dict() for d in data]
     data2 = [d.to_dict() for d in data2]
@@ -180,7 +180,8 @@ def all_ported_numbers_transfer_job(target):
             ftp = FTP(LNP_HOST)
             ftp.login(LNP_USER, LNP_PASSWORD)
             # store latest file
-            ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio_latest)
+            ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv",
+                           df.to_csv(index=False, sep=",", media_type="text/csv"))
             # store latest file CELL
             ftp.storbinary(f"STOR {cell_filename}", bio_cell)
             # store history
