@@ -81,8 +81,8 @@ def push_all_portings_file():
     payload = request.get_json()
     target = payload.get('target')
     print(f"STARTING ALL PORTINGS TRANSFER THREAD!")
-    ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(target=target))
-    ftp_transfer_thread.start()
+    # ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(target=target))
+    # ftp_transfer_thread.start()
 
     return 'ftp done!'
 
