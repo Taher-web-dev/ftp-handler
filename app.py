@@ -159,9 +159,7 @@ def all_ported_numbers_transfer_job(target):
     status = True
     error = None
     f = io.StringIO()
-    f.seek(0)
     f2 = io.StringIO()
-    f2.seek(0)
     df_cols = ['number', 'block_operator', 'block_operator_prefix', 'new_operator', 'new_operator_prefix',
                'number_porting', 'date_porting', 'date_porting_lbl', 'status']
 
@@ -180,6 +178,9 @@ def all_ported_numbers_transfer_job(target):
 
     df.to_csv(f, index=False)
     df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
+
+    f.seek(0)
+    f2.seek(0)
 
     gcs.get_bucket("lnp-files").blob("/ported_numbers/ported_numbers.csv") \
         .upload_from_file(f, content_type='text/csv')
