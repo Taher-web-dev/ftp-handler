@@ -159,7 +159,9 @@ def all_ported_numbers_transfer_job(target):
     status = True
     error = None
     f = io.StringIO()
+    f.seek(0)
     f2 = io.StringIO()
+    f2.seek(0)
     df_cols = ['number', 'block_operator', 'block_operator_prefix', 'new_operator', 'new_operator_prefix',
                'number_porting', 'date_porting', 'date_porting_lbl', 'status']
 
