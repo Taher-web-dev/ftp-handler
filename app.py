@@ -37,6 +37,7 @@ if ENV == "PROD":
     fb_cred_path = "./secrets/lnpbermuda-prod-firebase-adminsdk-ovf8g-a4685962de.json"
     cell_filename = "/public_ftp/ported_numbers.csv"
     project_name = "lnpbermuda-prod"
+    bucket_name = "lnp-files-prod"
 
 else:
     lnp_single_record_directory = "/test_directory"
@@ -47,6 +48,7 @@ else:
     fb_cred_path = "./secrets/lnpbermuda-dev-firebase-adminsdk-125rr-bad1f123e9.json"
     cell_filename = "/test_directory/ported_numbers_TEST.csv"
     project_name = "lnpbermuda-dev"
+    bucket_name = "lnp-files"
 
 cred = credentials.Certificate(fb_cred_path)
 firebase_admin.initialize_app(cred)
@@ -182,9 +184,9 @@ def all_ported_numbers_transfer_job(target):
     f.seek(0)
     f2.seek(0)
 
-    gcs.get_bucket("lnp-files").blob("ported_numbers.csv") \
+    gcs.get_bucket(bucket_name).blob("ported_numbers.csv") \
         .upload_from_file(f, content_type='text/csv')
-    gcs.get_bucket("lnp-files").blob("ported_numbers2.csv") \
+    gcs.get_bucket(bucket_name).blob("ported_numbers2.csv") \
         .upload_from_file(f2, content_type='text/csv')
     # bio_latest = io.BytesIO(str.encode(f.getvalue()))
     # bio_history = io.BytesIO(str.encode(f.getvalue()))
