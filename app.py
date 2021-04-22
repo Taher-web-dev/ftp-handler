@@ -188,6 +188,13 @@ def all_ported_numbers_transfer_job(target):
         .upload_from_file(f, content_type='text/csv')
     gcs.get_bucket(bucket_name).blob("ported_numbers2.csv") \
         .upload_from_file(f2, content_type='text/csv')
+
+    bucket = gcs.bucket(bucket_name)
+    blob = bucket.blob("ported_numbers.csv")
+    blob2 = bucket.blob("ported_numbers2.csv")
+
+    blob.make_public()
+    blob2.make_public()
     # bio_latest = io.BytesIO(str.encode(f.getvalue()))
     # bio_history = io.BytesIO(str.encode(f.getvalue()))
     # bio_cell = io.BytesIO(str.encode(f2.getvalue()))
