@@ -14,7 +14,7 @@ import pandas as pd
 import io
 from ftplib import FTP
 
-from google.cloud import bigquery
+from google.cloud import bigquery, storage
 from google.cloud.firestore import Query
 from google.cloud.firestore_v1 import Client
 
@@ -26,6 +26,7 @@ LNP_PASSWORD = "LA04dpv1951"
 gmail_access_email: str = "rmp@horrockslnp.net"
 gmail_access_password: str = 'p8P.~b6j!)<m2"8%'
 bq = bigquery.Client()
+gcs = storage.Client()
 
 if ENV == "PROD":
     lnp_single_record_directory = "/public_html/data/SingleRecord"
@@ -81,8 +82,8 @@ def push_all_portings_file():
     payload = request.get_json()
     target = payload.get('target')
     print(f"STARTING ALL PORTINGS TRANSFER THREAD!")
-    # ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(target=target))
-    # ftp_transfer_thread.start()
+    ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(target=target))
+    ftp_transfer_thread.start()
 
     return 'ftp done!'
 
@@ -178,32 +179,36 @@ def all_ported_numbers_transfer_job(target):
     df.to_csv(f, index=False)
     df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
 
-    bio_latest = io.BytesIO(str.encode(f.getvalue()))
-    bio_history = io.BytesIO(str.encode(f.getvalue()))
-    bio_cell = io.BytesIO(str.encode(f2.getvalue()))
-    date = datetime.now()
-    if target == 'lnp':
-        try:
-            ftp = FTP(LNP_HOST)
-            ftp.login(LNP_USER, LNP_PASSWORD)
-            # store latest file
-            ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio_latest)
-            # store latest file CELL
-            ftp.storbinary(f"STOR {cell_filename}", bio_cell)
-            # store history
-            filename = f'NPSported_numbers_{date.strftime("%Y-%m-%d_%H:%M:%S")}.csv'
-            ftp.storbinary(f'STOR {lnp_history_dir}/{filename}', bio_history)
-
-            ftp.close()
-
-            print(f"All ported numbers  Pushed to {target}")
-        except Exception as e:
-            status = False
-            error = str(e)
-            print(f"EXCEPTION at PORTING LIST TRANSFER for {target} => {str(e)}")
-
-    log_ftp(filename="ported_numbers", target=target, type="ALL_PORTINGS", datetime=str(date), status=status,
-            error=error)
+    gcs.get_bucket("lnp-files").blob("/ported_numbers/ported_numbers.csv") \
+        .upload_from_file(f, content_type='text/csv')
+    gcs.get_bucket("lnp-files").blob("/ported_numbers/ported_numbers2.csv") \
+        .upload_from_file(f2, content_type='text/csv')
+    # bio_latest = io.BytesIO(str.encode(f.getvalue()))
+    # bio_history = io.BytesIO(str.encode(f.getvalue()))
+    # bio_cell = io.BytesIO(str.encode(f2.getvalue()))
+    # date = datetime.now()
+    # if target == 'lnp':
+    #     try:
+    #         ftp = FTP(LNP_HOST)
+    #         ftp.login(LNP_USER, LNP_PASSWORD)
+    #         # store latest file
+    #         ftp.storbinary(f"STOR {lnp_last_update_dir}/ported_numbers.csv", bio_latest)
+    #         # store latest file CELL
+    #         ftp.storbinary(f"STOR {cell_filename}", bio_cell)
+    #         # store history
+    #         filename = f'NPSported_numbers_{date.strftime("%Y-%m-%d_%H:%M:%S")}.csv'
+    #         ftp.storbinary(f'STOR {lnp_history_dir}/{filename}', bio_history)
+    #
+    #         ftp.close()
+    #
+    #         print(f"All ported numbers  Pushed to {target}")
+    #     except Exception as e:
+    #         status = False
+    #         error = str(e)
+    #         print(f"EXCEPTION at PORTING LIST TRANSFER for {target} => {str(e)}")
+    #
+    # log_ftp(filename="ported_numbers", target=target, type="ALL_PORTINGS", datetime=str(date), status=status,
+    #         error=error)
 
 
 def log_ftp(**data):
