@@ -91,64 +91,74 @@ def push_all_portings_file():
 
 
 def ftp_transfer_job(data, target, filename):
-    print(f"FTP Job started for {target} - {filename}")
-    res = ""
-    status = True
-    error = ""
+    try:
+        print(f"FTP Job started for {target} - {filename}")
+        res = ""
+        status = True
+        error = ""
 
-    if target != 'netnumber':
-        for doc in data:
-            for k, v in doc.items():
-                res += f"{k} : {v} \n"
-    elif target == 'netnumber':
-        for doc in data:
-            for k, v in doc.items():
-                res += f"{v},"
-        res = res[:-1]
+        if target != 'netnumber':
+            for doc in data:
+                for k, v in doc.items():
+                    res += f"{k} : {v} \n"
+        elif target == 'netnumber':
+            for doc in data:
+                for k, v in doc.items():
+                    res += f"{v},"
+            res = res[:-1]
 
-    if target == 'lnp':
-        bio = io.BytesIO(str.encode(res))
-        try:
-            ftp = FTP(LNP_HOST)
-            ftp.login(LNP_USER, LNP_PASSWORD)
-            ftp.cwd(lnp_single_record_directory)
-            ftp.storbinary(f"STOR {filename}", bio)
-            print(f"finished file transfer for {filename}.")
-            ftp.close()
-        except Exception as e:
-            status = False
-            error = str(e)
-            print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
+        if target == 'lnp':
+            bio = io.BytesIO(str.encode(res))
+            try:
+                ftp = FTP(LNP_HOST)
+                ftp.login(LNP_USER, LNP_PASSWORD)
+                ftp.cwd(lnp_single_record_directory)
+                ftp.storbinary(f"STOR {filename}", bio)
+                print(f"finished file transfer for {filename}.")
+                ftp.close()
+            except Exception as e:
+                status = False
+                error = str(e)
+                print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
 
-    elif target == 'netnumber':
-        try:
-            with pysftp.Connection(host="ftp.netnumber.com", username="bmnp", private_key_pass="lnpbermuda",
-                                   private_key="/home/aziz/.ssh/id_rsa") as sftp:
-                sftp.cwd(netnumber_directory)
-                sftp.putfo(io.StringIO(res), filename)
-        except Exception as e:
-            status = False
-            error = str(e)
-            print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
+        elif target == 'netnumber':
+            try:
+                with pysftp.Connection(host="ftp.netnumber.com", username="bmnp", private_key_pass="lnpbermuda",
+                                       private_key="/home/aziz/.ssh/id_rsa") as sftp:
+                    sftp.cwd(netnumber_directory)
+                    sftp.putfo(io.StringIO(res), filename)
+            except Exception as e:
+                status = False
+                error = str(e)
+                print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
 
-    elif target == 'digicel':
-        try:
-            with pysftp.Connection(host="64.147.95.49", username="LNPBermuda", password="4mAuYfV8cstQezpw") as sftp:
-                sftp.cwd(digicel_directory)
-                sftp.putfo(io.StringIO(res), filename)
-        except Exception as e:
-            status = False
-            error = str(e)
-            print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
+        elif target == 'digicel':
+            try:
+                with pysftp.Connection(host="64.147.95.49", username="LNPBermuda", password="4mAuYfV8cstQezpw") as sftp:
+                    sftp.cwd(digicel_directory)
+                    sftp.putfo(io.StringIO(res), filename)
+            except Exception as e:
+                status = False
+                error = str(e)
+                print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
 
-    if status is False:
-        send_email(subject="FTP transfer Failed!",
-                   body=f"ftp transfer failed for file {filename} check logs for more information.",
-                   addresses=["aziz@tanitlab.com"],
-                   filename=filename)
+        if status is False:
+            try:
+                send_email(subject="FTP transfer Failed!",
+                           body=f"ftp transfer failed for file {filename} check logs for more information.",
+                           addresses=["aziz@tanitlab.com"],
+                           filename=filename)
+            except Exception as e:
+                log_ftp(filename=filename, target=target, type="SINGLE_DOC_EMAIL", datetime=str(datetime.now()),
+                        status=False, error=str(e))
 
-    log_ftp(filename=filename, target=target, type="SINGLE_DOC", datetime=str(datetime.now()),
-            status=status, error=error)
+        log_ftp(filename=filename, target=target, type="SINGLE_DOC", datetime=str(datetime.now()),
+                status=status, error=error)
+
+    except Exception as e:
+        print(f"EXCEPTION at SINGLE RECORD TRANSFER for {target} => {str(e)}")
+        log_ftp(filename=filename, target=target, type="SINGLE_DOC", datetime=str(datetime.now()),
+                status=False, error=str(e))
     print(f"{filename} Pushed to {target}")
 
 
