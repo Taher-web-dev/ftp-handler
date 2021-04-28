@@ -191,11 +191,11 @@ def all_ported_numbers_transfer_job(target):
     df.to_csv(f, index=False)
     df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
 
-    f.seek(0)
+    f.seek(0,2)
     size = f.tell()
     f.truncate(size - 2)
 
-    f2.seek(0)
+    f2.seek(0,2)
     size2 = f2.tell()
     f2.truncate(size2 - 2)
 
