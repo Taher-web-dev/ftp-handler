@@ -195,7 +195,7 @@ def all_ported_numbers_transfer_job(target):
     f2.seek(0)
 
     gcs.get_bucket(bucket_name).blob("ported_numbers.csv") \
-        .upload_from_file(f, content_type='text/csv')
+        .upload_from_file(f.getvalue()[:-1], content_type='text/csv')
     gcs.get_bucket(bucket_name).blob("ported_numbers2.csv") \
         .upload_from_file(f2, content_type='text/csv')
 
