@@ -188,8 +188,8 @@ def all_ported_numbers_transfer_job(target):
     print("---------------------------------------------")
     print(df2)
 
-    df.to_csv(f, index=False)
-    df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
+    df.to_csv(f, index=False, line_terminator="")
+    df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL, line_terminator="")
 
     f.seek(0)
     f2.seek(0)
