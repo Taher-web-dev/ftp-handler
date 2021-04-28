@@ -192,16 +192,10 @@ def all_ported_numbers_transfer_job(target):
     df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
 
     f.seek(0)
-    str1 = f.getvalue()[:-2]
-
     f2.seek(0)
-    str2 = f2.getvalue()[:-2]
 
-    f11 = io.StringIO(str1)
-    f12 = io.StringIO(str2)
-
-    gcs.get_bucket(bucket_name).blob("ported_numbers.csv").upload_from_file(f11, content_type='text/csv')
-    gcs.get_bucket(bucket_name).blob("ported_numbers2.csv").upload_from_file(f12, content_type='text/csv')
+    gcs.get_bucket(bucket_name).blob("ported_numbers.csv").upload_from_file(f, content_type='text/csv')
+    gcs.get_bucket(bucket_name).blob("ported_numbers2.csv").upload_from_file(f2, content_type='text/csv')
 
     bucket = gcs.bucket(bucket_name)
     blob = bucket.blob("ported_numbers.csv")
