@@ -188,16 +188,19 @@ def all_ported_numbers_transfer_job(target):
     print("---------------------------------------------")
     print(df2)
 
-    df.to_csv(f, index=False, line_terminator='\t')
-    df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL, line_terminator='\t')
+    df.to_csv(f, index=False)
+    df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
 
     f.seek(0)
-    f2.seek(0)
+    size = f.tell()
+    f.truncate(size - 2)
 
-    gcs.get_bucket(bucket_name).blob("ported_numbers.csv") \
-        .upload_from_file(f.getvalue()[:-1], content_type='text/csv')
-    gcs.get_bucket(bucket_name).blob("ported_numbers2.csv") \
-        .upload_from_file(f2, content_type='text/csv')
+    f2.seek(0)
+    size2 = f2.tell()
+    f2.truncate(size2 - 2)
+
+    gcs.get_bucket(bucket_name).blob("ported_numbers.csv").upload_from_file(f, content_type='text/csv')
+    gcs.get_bucket(bucket_name).blob("ported_numbers2.csv").upload_from_file(f2, content_type='text/csv')
 
     bucket = gcs.bucket(bucket_name)
     blob = bucket.blob("ported_numbers.csv")
