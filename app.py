@@ -9,7 +9,7 @@ from datetime import datetime
 import firebase_admin
 import pysftp
 from firebase_admin import credentials, firestore
-from flask import Flask, request
+from flask import Flask, request,Response
 import pandas as pd
 import io
 from ftplib import FTP
@@ -17,6 +17,8 @@ from ftplib import FTP
 from google.cloud import bigquery, storage
 from google.cloud.firestore import Query
 from google.cloud.firestore_v1 import Client
+import time
+import logging
 
 app = Flask(__name__)
 ENV = os.environ.get('ENV')
@@ -79,15 +81,16 @@ def push_file():
     return 'ftp done!'
 
 
-@app.route('/all_portings', methods=['POST'])
+@app.route('/all_portings', methods=['GET'])
 def push_all_portings_file():
-    payload = request.get_json()
-    target = payload.get('target')
+    #payload = request.get_json()
+    #target = payload.get('target')
     print(f"STARTING ALL PORTINGS TRANSFER THREAD!")
-    ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(target=target))
-    ftp_transfer_thread.start()
+    #ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(target=target))
+    #ftp_transfer_thread.start()
 
-    return 'ftp done!'
+    #return 'ftp done!'
+    return all_ported_numbers_transfer_job()
 
 
 def ftp_transfer_job(data, target, filename):
@@ -162,47 +165,48 @@ def ftp_transfer_job(data, target, filename):
     print(f"{filename} Pushed to {target}")
 
 
-def all_ported_numbers_transfer_job(target):
-    print(f"All ported numbers Job started for {target} ")
+def all_ported_numbers_transfer_job():
+    print(f"All ported numbers Job started")
+    t0 = time.time()
     data = dbf.collection('portings').order_by("date_porting", direction=Query.DESCENDING).stream()
-    data2 = dbf.collection('portings').order_by("date_porting").stream()
+    #data2 = dbf.collection('portings').order_by("date_porting").stream()
     data = [d.to_dict() for d in data]
-    data2 = [d2.to_dict() for d2 in data2]
-    status = True
-    error = None
+    #data2 = [d2.to_dict() for d2 in data2]
+    #status = True
+    #error = None
     f = io.StringIO()
-    f2 = io.StringIO()
+    #f2 = io.StringIO()
     df_cols = ['number', 'block_operator', 'block_operator_prefix', 'new_operator', 'new_operator_prefix',
                'number_porting', 'date_porting', 'date_porting_lbl', 'status']
 
     df = pd.DataFrame(data)
-    df2 = pd.DataFrame(data2)
+    #df2 = pd.DataFrame(data2)
+
+    # get the data size
+    memory_usage = df.memory_usage(deep=True)
+    total_memory_usage = memory_usage.sum()
+    size_mb = total_memory_usage / (1024 * 1024)
+    nb_rows = len(df)
 
     df = df.loc[:, df_cols]
-    df2 = df2.loc[:, df_cols]
-
-    print("DF1")
-    print("---------------------------------------------")
-    print(df)
-    print("DF2")
-    print("---------------------------------------------")
-    print(df2)
-
+    #df2 = df2.loc[:, df_cols]
     df.to_csv(f, index=False)
-    df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
+    
+    #df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
 
     f.seek(0)
-    f2.seek(0)
 
     gcs.get_bucket(bucket_name).blob("ported_numbers.csv").upload_from_file(f, content_type='text/csv')
-    gcs.get_bucket(bucket_name).blob("ported_numbers2.csv").upload_from_file(f2, content_type='text/csv')
-
+    #gcs.get_bucket(bucket_name).blob("ported_numbers2.csv").upload_from_file(f2, content_type='text/csv')
     bucket = gcs.bucket(bucket_name)
     blob = bucket.blob("ported_numbers.csv")
-    blob2 = bucket.blob("ported_numbers2.csv")
+    #blob2 = bucket.blob("ported_numbers2.csv")
 
     blob.make_public()
-    blob2.make_public()
+    #blob2.make_public()
+    print(f" time required to handle  a data with equivalent to {size_mb:.2f} MB and {nb_rows} rows is : {time.time() - t0} seconds")
+    logging.info(f" time required to handle  a data with equivalent to {size_mb:.2f} MB and {nb_rows} rows is : {time.time() - t0} seconds")
+    return Response(df.to_csv(index=False), status=200, mimetype='text/csv',headers={'Content-Disposition':f"attachment;filename=portings-{datetime.now()}.csv",'Access-Control-Expose-Headers': 'Content-Disposition'})
     # bio_latest = io.BytesIO(str.encode(f.getvalue()))
     # bio_history = io.BytesIO(str.encode(f.getvalue()))
     # bio_cell = io.BytesIO(str.encode(f2.getvalue()))
