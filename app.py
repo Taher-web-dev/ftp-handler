@@ -17,8 +17,9 @@ from ftplib import FTP
 from google.cloud import bigquery, storage
 from google.cloud.firestore import Query
 from google.cloud.firestore_v1 import Client
+import pytz
 import time
-import logging
+
 
 app = Flask(__name__)
 ENV = os.environ.get('ENV')
@@ -83,14 +84,11 @@ def push_file():
 
 @app.route('/all_portings', methods=['POST'])
 def push_all_portings_file():
-    payload = request.get_json()
-    target = payload.get('target')
     print(f"STARTING ALL PORTINGS TRANSFER THREAD!")
-    ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job, kwargs=dict(target=target))
+    ftp_transfer_thread = Thread(target=all_ported_numbers_transfer_job)
     ftp_transfer_thread.start()
 
     return 'ftp done!'
-    #return all_ported_numbers_transfer_job()
 
 
 def ftp_transfer_job(data, target, filename):
@@ -167,46 +165,67 @@ def ftp_transfer_job(data, target, filename):
 
 def all_ported_numbers_transfer_job():
     print(f"All ported numbers Job started")
-    t0 = time.time()
     data = dbf.collection('portings').order_by("date_porting", direction=Query.DESCENDING).stream()
-    #data2 = dbf.collection('portings').order_by("date_porting").stream()
-    data = [d.to_dict() for d in data]
-    #data2 = [d2.to_dict() for d2 in data2]
-    #status = True
-    #error = None
+    data2 = dbf.collection('portings').order_by("date_porting").stream()
+
+    date_format = "%d %b %Y - %I:%M %p"
+    bermuda_time_zone = pytz.timezone('Atlantic/Bermuda')
+    result = []
+    result1 = []
+    for (p,p1) in zip(data,data2):
+        new_data = {"id": p.id,'porting_id':p.id}
+        new_data_1= {"id": p1.id,'porting_id':p1.id}
+        d = p.to_dict()
+        d1 = p1.to_dict()
+        
+        #time for descending sort
+        date_porting_lbl = d.pop('date_porting_lbl')
+        date_porting_lbl = datetime.strptime(date_porting_lbl,date_format)
+        date_porting_bermuda = date_porting_lbl.astimezone(bermuda_time_zone)
+        date_porting_bermuda = date_porting_bermuda.strftime(date_format)
+        date_porting = d.pop('date_porting') 
+        d['date_porting_GMT'] = date_porting 
+        d['date_porting_lbl_GMT_4'] = f'{date_porting_bermuda} GMT-4'
+        new_data.update(d)
+        result.append(new_data)
+
+        #time for acending sort
+        date_porting_lbl = d1.pop('date_porting_lbl')
+        date_porting_lbl = datetime.strptime(date_porting_lbl,date_format)
+        date_porting_bermuda = date_porting_lbl.astimezone(bermuda_time_zone)
+        date_porting_bermuda = date_porting_bermuda.strftime(date_format)
+        date_porting = d1.pop('date_porting') 
+        d1['date_porting_GMT'] = date_porting 
+        d1['date_porting_lbl_GMT_4'] = f'{date_porting_bermuda} GMT-4'
+        new_data_1.update(d)
+        result1.append(new_data)
+
+    data = result.copy()
+    data2 = result1.copy()
     f = io.StringIO()
-    #f2 = io.StringIO()
+    f2 = io.StringIO()
     df_cols = ['number', 'block_operator', 'block_operator_prefix', 'new_operator', 'new_operator_prefix',
-               'number_porting', 'date_porting', 'date_porting_lbl', 'status']
+               'number_porting', 'date_porting_GMT', 'date_porting_lbl_GMT_4', 'status']
 
     df = pd.DataFrame(data)
-    #df2 = pd.DataFrame(data2)
-
-    # get the data size
-    memory_usage = df.memory_usage(deep=True)
-    total_memory_usage = memory_usage.sum()
-    size_mb = total_memory_usage / (1024 * 1024)
-    nb_rows = len(df)
+    df2 = pd.DataFrame(data2)
 
     df = df.loc[:, df_cols]
-    #df2 = df2.loc[:, df_cols]
-    df.to_csv(f, index=False)
+    df2 = df2.loc[:, df_cols]
     
-    #df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
+    df.to_csv(f, index=False)
+    df2.to_csv(f2, index=False, quoting=csv.QUOTE_ALL)
 
     f.seek(0)
-
+    f2.seek(0)
     gcs.get_bucket(bucket_name).blob("ported_numbers.csv").upload_from_file(f, content_type='text/csv')
-    #gcs.get_bucket(bucket_name).blob("ported_numbers2.csv").upload_from_file(f2, content_type='text/csv')
+    gcs.get_bucket(bucket_name).blob("ported_numbers2.csv").upload_from_file(f2, content_type='text/csv')
     bucket = gcs.bucket(bucket_name)
     blob = bucket.blob("ported_numbers.csv")
-    #blob2 = bucket.blob("ported_numbers2.csv")
+    blob2 = bucket.blob("ported_numbers2.csv")
 
     blob.make_public()
-    #blob2.make_public()
-    print(f" time required to handle  a data with equivalent to {size_mb:.2f} MB and {nb_rows} rows is : {time.time() - t0} seconds")
-    logging.info(f" time required to handle  a data with equivalent to {size_mb:.2f} MB and {nb_rows} rows is : {time.time() - t0} seconds")
-    return Response(df.to_csv(index=False), status=200, mimetype='text/csv',headers={'Content-Disposition':f"attachment;filename=portings-{datetime.now()}.csv",'Access-Control-Expose-Headers': 'Content-Disposition'})
+    blob2.make_public()
     # bio_latest = io.BytesIO(str.encode(f.getvalue()))
     # bio_history = io.BytesIO(str.encode(f.getvalue()))
     # bio_cell = io.BytesIO(str.encode(f2.getvalue()))
